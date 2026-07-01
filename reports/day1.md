@@ -10,7 +10,7 @@ Created the "Salah" project with create-expo-app
 Ran it live on my phone (Hello World with hot reload)
 Built a static prayer-times screen using View, Text, ScrollView
 Hardcoded the 5 prayers in styled cards, softened the colors to a light palette
-Set up Git, created a public GitHub repo, committed and pushed all my work
+Set up Git, created a public GitHub repo, committed and pushed all my work which claude helped me a bit
 
 
 What I learned
