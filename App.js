@@ -53,12 +53,18 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#ffffff',
-    flexDirection: 'column',        
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  prayerTime: {
-    fontSize: 18,
-    color: '#9a9ac0',
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#f0eef8',
+    shadowColor: '#c8c4e0',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 2,
   },
 });
