@@ -1,13 +1,19 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 
-// A reusable component — one blueprint for every prayer card.
-// It receives "name" and "time" as props (inputs) and displays them.
-function PrayerCard({ name, time }) {
+// Reusable prayer card. "highlight" makes the next prayer stand out.
+function PrayerCard({ name, time, highlight }) {
   return (
-    <View style={styles.card}>
-      <Text style={styles.prayerName}>{name}</Text>
-      <Text style={styles.prayerTime}>{time}</Text>
+    <View style={[styles.card, highlight && styles.cardHighlight]}>
+      <View>
+        <Text style={[styles.prayerName, highlight && styles.textLight]}>
+          {name}
+        </Text>
+        {highlight && <Text style={styles.nextLabel}>Next prayer</Text>}
+      </View>
+      <Text style={[styles.prayerTime, highlight && styles.textLight]}>
+        {time}
+      </Text>
     </View>
   );
 }
@@ -15,15 +21,18 @@ function PrayerCard({ name, time }) {
 export default function App() {
   return (
     <View style={styles.container}>
-      <StatusBar style="auto" />
+      <StatusBar style="dark" />
 
-      <Text style={styles.title}>Prayer Times</Text>
-      <Text style={styles.subtitle}>Istanbul, Turkey</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Prayer Times</Text>
+        <Text style={styles.subtitle}>Istanbul, Turkey</Text>
+        <Text style={styles.date}>Friday, 3 July</Text>
+      </View>
 
-      <ScrollView style={styles.list}>
+      <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
         <PrayerCard name="Fajr" time="03:31" />
         <PrayerCard name="Dhuhr" time="13:15" />
-        <PrayerCard name="Asr" time="17:14" />
+        <PrayerCard name="Asr" time="17:14" highlight={true} />
         <PrayerCard name="Maghrib" time="20:47" />
         <PrayerCard name="Isha" time="22:36" />
       </ScrollView>
@@ -38,15 +47,23 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 20,
   },
+  header: {
+    marginBottom: 24,
+  },
   title: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: 'bold',
-    color: '#5a5a8a',
+    color: '#3a3a5a',
   },
   subtitle: {
     fontSize: 16,
-    color: '#a0a0b8',
-    marginBottom: 20,
+    color: '#9a9ac0',
+    marginTop: 2,
+  },
+  date: {
+    fontSize: 14,
+    color: '#b0b0c8',
+    marginTop: 8,
   },
   list: {
     flex: 1,
@@ -66,5 +83,27 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 2,
+  },
+  cardHighlight: {
+    backgroundColor: '#6a6ac0',
+    borderColor: '#6a6ac0',
+  },
+  prayerName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#4a4a6a',
+  },
+  prayerTime: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#9a9ac0',
+  },
+  textLight: {
+    color: '#ffffff',
+  },
+  nextLabel: {
+    fontSize: 12,
+    color: '#dcdcf5',
+    marginTop: 2,
   },
 });
