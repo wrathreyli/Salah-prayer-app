@@ -1,22 +1,16 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import PrayerCard from './components/PrayerCard';
 
-// Reusable prayer card. "highlight" makes the next prayer stand out.
-function PrayerCard({ name, time, highlight }) {
-  return (
-    <View style={[styles.card, highlight && styles.cardHighlight]}>
-      <View>
-        <Text style={[styles.prayerName, highlight && styles.textLight]}>
-          {name}
-        </Text>
-        {highlight && <Text style={styles.nextLabel}>Next prayer</Text>}
-      </View>
-      <Text style={[styles.prayerTime, highlight && styles.textLight]}>
-        {time}
-      </Text>
-    </View>
-  );
-}
+// Prayer data stored as an array of objects.
+// Later, this is what we'll replace with data from the real API.
+const prayers = [
+  { id: 1, name: 'Fajr', time: '03:31', highlight: false },
+  { id: 2, name: 'Dhuhr', time: '13:15', highlight: false },
+  { id: 3, name: 'Asr', time: '17:14', highlight: true },
+  { id: 4, name: 'Maghrib', time: '20:47', highlight: false },
+  { id: 5, name: 'Isha', time: '22:36', highlight: false },
+];
 
 export default function App() {
   return (
@@ -30,11 +24,14 @@ export default function App() {
       </View>
 
       <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
-        <PrayerCard name="Fajr" time="03:31" />
-        <PrayerCard name="Dhuhr" time="13:15" />
-        <PrayerCard name="Asr" time="17:14" highlight={true} />
-        <PrayerCard name="Maghrib" time="20:47" />
-        <PrayerCard name="Isha" time="22:36" />
+        {prayers.map((prayer) => (
+          <PrayerCard
+            key={prayer.id}
+            name={prayer.name}
+            time={prayer.time}
+            highlight={prayer.highlight}
+          />
+        ))}
       </ScrollView>
     </View>
   );
@@ -67,43 +64,5 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#f0eef8',
-    shadowColor: '#c8c4e0',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  cardHighlight: {
-    backgroundColor: '#6a6ac0',
-    borderColor: '#6a6ac0',
-  },
-  prayerName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#4a4a6a',
-  },
-  prayerTime: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#9a9ac0',
-  },
-  textLight: {
-    color: '#ffffff',
-  },
-  nextLabel: {
-    fontSize: 12,
-    color: '#dcdcf5',
-    marginTop: 2,
   },
 });
