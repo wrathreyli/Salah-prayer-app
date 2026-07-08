@@ -14,10 +14,10 @@ What I learned (your own words)
 
 Array styles [styleA, condition && styleB] let me apply a second style only when a condition is true
 Conditional rendering {condition && <Component />} shows an element only when the condition is true
-A boolean prop (like highlight) can change both how a component looks and what it displays
+A boolean prop can change both how a component looks and what it displays
 Visual hierarchy — using headers, spacing, and a highlighted card — guides the user's eye and makes the app feel like a real product
 
 Problems & how I solved them
 
 I committed but my code hadn't saved yet (the tab still had the unsaved dot), so I learned to always save with Ctrl+S before committing
-(Add anything else you hit)
+and also i am trying to figure out how i can make the buttons functional ( i will look into that another day)

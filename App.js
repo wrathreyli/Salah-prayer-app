@@ -1,68 +1,26 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
-import PrayerCard from './components/PrayerCard';
+import { NavigationContainer } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
-// Prayer data stored as an array of objects.
-// Later, this is what we'll replace with data from the real API.
-const prayers = [
-  { id: 1, name: 'Fajr', time: '03:31', highlight: false },
-  { id: 2, name: 'Dhuhr', time: '13:15', highlight: false },
-  { id: 3, name: 'Asr', time: '17:14', highlight: true },
-  { id: 4, name: 'Maghrib', time: '20:47', highlight: false },
-  { id: 5, name: 'Isha', time: '22:36', highlight: false },
-];
+import TodayScreen from './screens/TodayScreen';
+import HistoryScreen from './screens/HistoryScreen';
+import SettingsScreen from './screens/SettingsScreen';
+
+const Tab = createBottomTabNavigator();
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
-
-      <View style={styles.header}>
-        <Text style={styles.title}>Prayer Times</Text>
-        <Text style={styles.subtitle}>Istanbul, Turkey</Text>
-        <Text style={styles.date}>Friday, 3 July</Text>
-      </View>
-
-      <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
-        {prayers.map((prayer) => (
-          <PrayerCard
-            key={prayer.id}
-            name={prayer.name}
-            time={prayer.time}
-            highlight={prayer.highlight}
-          />
-        ))}
-      </ScrollView>
-    </View>
+    <NavigationContainer>
+      <Tab.Navigator
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: '#6a6ac0',
+          tabBarInactiveTintColor: '#b0b0c8',
+        }}
+      >
+        <Tab.Screen name="Today" component={TodayScreen} />
+        <Tab.Screen name="History" component={HistoryScreen} />
+        <Tab.Screen name="Settings" component={SettingsScreen} />
+      </Tab.Navigator>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fdfcff',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 34,
-    fontWeight: 'bold',
-    color: '#3a3a5a',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#9a9ac0',
-    marginTop: 2,
-  },
-  date: {
-    fontSize: 14,
-    color: '#b0b0c8',
-    marginTop: 8,
-  },
-  list: {
-    flex: 1,
-  },
-});
