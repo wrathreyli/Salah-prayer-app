@@ -1,32 +1,56 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import PrayerCard from '../components/PrayerCard';
-
-const prayers = [
-  { id: 1, name: 'Fajr', time: '03:31', highlight: false },
-  { id: 2, name: 'Dhuhr', time: '13:15', highlight: false },
-  { id: 3, name: 'Asr', time: '17:14', highlight: true },
-  { id: 4, name: 'Maghrib', time: '20:47', highlight: false },
-  { id: 5, name: 'Isha', time: '22:36', highlight: false },
-];
+import { useEffect, useState } from 'react';
 
 export default function TodayScreen() {
+  const [timings, setTimings] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchPrayerTimes() {
+      try {
+        const url =
+          'https://api.aladhan.com/v1/timingsByCity?city=Istanbul&country=Turkey&method=13';
+        const response = await fetch(url);
+        const data = await response.json();
+        setTimings(data.data.timings);
+        setLoading(false);
+      } catch (error) {
+        console.log('Error fetching prayer times:', error);
+        setLoading(false);
+      }
+    }
+    fetchPrayerTimes();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.date}>Loading prayer times...</Text>
+      </View>
+    );
+  }
+
+  const prayers = [
+    { id: 1, name: 'Fajr', time: timings.Fajr },
+    { id: 2, name: 'Dhuhr', time: timings.Dhuhr },
+    { id: 3, name: 'Asr', time: timings.Asr },
+    { id: 4, name: 'Maghrib', time: timings.Maghrib },
+    { id: 5, name: 'Isha', time: timings.Isha },
+  ];
+
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
       <View style={styles.header}>
         <Text style={styles.title}>Prayer Times</Text>
         <Text style={styles.subtitle}>Istanbul, Turkey</Text>
-        <Text style={styles.date}>Friday, 3 July</Text>
+        <Text style={styles.date}>Today</Text>
       </View>
       <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
         {prayers.map((prayer) => (
-          <PrayerCard
-            key={prayer.id}
-            name={prayer.name}
-            time={prayer.time}
-            highlight={prayer.highlight}
-          />
+          <PrayerCard key={prayer.id} name={prayer.name} time={prayer.time} />
         ))}
       </ScrollView>
     </View>
