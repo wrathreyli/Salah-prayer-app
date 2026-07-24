@@ -3,6 +3,16 @@ import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import PrayerCard from '../components/PrayerCard';
 import { useEffect, useState } from 'react';
 import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Returns today's date as a string like "2026-07-24".
+function getTodayKey() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `prayers-${year}-${month}-${day}`;
+}
 
 export default function TodayScreen() {
   const [timings, setTimings] = useState(null);
@@ -10,6 +20,7 @@ export default function TodayScreen() {
   const [locationName, setLocationName] = useState('Loading location...');
   const [completed, setCompleted] = useState([]);
 
+  // Fetch prayer times on load.
   useEffect(() => {
     async function loadPrayerTimes() {
       try {
@@ -40,15 +51,40 @@ export default function TodayScreen() {
     loadPrayerTimes();
   }, []);
 
-  // Add or remove a prayer from the completed list.
-  function toggleCompleted(prayerName) {
-    setCompleted((current) => {
-      if (current.includes(prayerName)) {
-        return current.filter((n) => n !== prayerName);
-      } else {
-        return [...current, prayerName];
+  // Load today's saved completions from the device.
+  useEffect(() => {
+    async function loadCompleted() {
+      try {
+        const saved = await AsyncStorage.getItem(getTodayKey());
+        if (saved !== null) {
+          setCompleted(JSON.parse(saved));
+        }
+      } catch (error) {
+        console.log('Error loading saved data:', error);
       }
-    });
+    }
+    loadCompleted();
+  }, []);
+
+  // Save to the device.
+  async function saveCompleted(newList) {
+    try {
+      await AsyncStorage.setItem(getTodayKey(), JSON.stringify(newList));
+    } catch (error) {
+      console.log('Error saving:', error);
+    }
+  }
+
+  // Toggle a prayer, then save the result.
+  function toggleCompleted(prayerName) {
+    let newList;
+    if (completed.includes(prayerName)) {
+      newList = completed.filter((n) => n !== prayerName);
+    } else {
+      newList = [...completed, prayerName];
+    }
+    setCompleted(newList);
+    saveCompleted(newList);
   }
 
   if (loading) {
