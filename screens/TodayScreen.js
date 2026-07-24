@@ -8,6 +8,7 @@ export default function TodayScreen() {
   const [timings, setTimings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [locationName, setLocationName] = useState('Loading location...');
+  const [completed, setCompleted] = useState([]);
 
   useEffect(() => {
     async function loadPrayerTimes() {
@@ -39,6 +40,17 @@ export default function TodayScreen() {
     loadPrayerTimes();
   }, []);
 
+  // Add or remove a prayer from the completed list.
+  function toggleCompleted(prayerName) {
+    setCompleted((current) => {
+      if (current.includes(prayerName)) {
+        return current.filter((n) => n !== prayerName);
+      } else {
+        return [...current, prayerName];
+      }
+    });
+  }
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -61,11 +73,17 @@ export default function TodayScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Prayer Times</Text>
         <Text style={styles.subtitle}>{locationName}</Text>
-        <Text style={styles.date}>Today</Text>
+        <Text style={styles.date}>{completed.length} of 5 completed today</Text>
       </View>
       <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
         {prayers.map((prayer) => (
-          <PrayerCard key={prayer.id} name={prayer.name} time={prayer.time} />
+          <PrayerCard
+            key={prayer.id}
+            name={prayer.name}
+            time={prayer.time}
+            completed={completed.includes(prayer.name)}
+            onPress={() => toggleCompleted(prayer.name)}
+          />
         ))}
       </ScrollView>
     </View>

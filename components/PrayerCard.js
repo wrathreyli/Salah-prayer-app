@@ -1,20 +1,24 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 
-// The PrayerCard component now lives in its own file.
-// "export default" lets other files import and use it.
-export default function PrayerCard({ name, time, highlight }) {
+export default function PrayerCard({ name, time, completed, onPress }) {
   return (
-    <View style={[styles.card, highlight && styles.cardHighlight]}>
-      <View>
-        <Text style={[styles.prayerName, highlight && styles.textLight]}>
+    <TouchableOpacity
+      style={[styles.card, completed && styles.cardCompleted]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View style={styles.left}>
+        <View style={[styles.circle, completed && styles.circleFilled]}>
+          {completed && <Text style={styles.check}>✓</Text>}
+        </View>
+        <Text style={[styles.prayerName, completed && styles.textMuted]}>
           {name}
         </Text>
-        {highlight && <Text style={styles.nextLabel}>Next prayer</Text>}
       </View>
-      <Text style={[styles.prayerTime, highlight && styles.textLight]}>
+      <Text style={[styles.prayerTime, completed && styles.textMuted]}>
         {time}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -35,9 +39,32 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  cardHighlight: {
+  cardCompleted: {
+    backgroundColor: '#f6f5fc',
+    borderColor: '#e4e0f4',
+  },
+  left: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  circle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#d8d4ec',
+    marginRight: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  circleFilled: {
     backgroundColor: '#6a6ac0',
     borderColor: '#6a6ac0',
+  },
+  check: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   prayerName: {
     fontSize: 18,
@@ -49,12 +76,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#9a9ac0',
   },
-  textLight: {
-    color: '#ffffff',
-  },
-  nextLabel: {
-    fontSize: 12,
-    color: '#dcdcf5',
-    marginTop: 2,
+  textMuted: {
+    color: '#b8b4d0',
   },
 });
