@@ -1,4 +1,4 @@
-# Day 10 Report — Saving Data on the Device
+# Day 10 Report
 
 ## What I set out to do
 Make the completed prayers save permanently so they don't disappear when the app closes.
