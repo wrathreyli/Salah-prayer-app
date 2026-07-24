@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { calculateStreak } from '../utils/streak';
 
 // Build a storage key for a given date.
 function getKeyForDate(date) {
@@ -23,6 +24,7 @@ function formatDate(date) {
 
 export default function HistoryScreen() {
   const [history, setHistory] = useState([]);
+  const [streak, setStreak] = useState(0);
 
   // Reload the history every time this tab is opened.
   useFocusEffect(
@@ -50,6 +52,8 @@ export default function HistoryScreen() {
         }
 
         setHistory(days);
+        const currentStreak = await calculateStreak();
+        setStreak(currentStreak);
       }
 
       loadHistory();
@@ -61,6 +65,10 @@ export default function HistoryScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>History</Text>
         <Text style={styles.subtitle}>Your last 7 days</Text>
+      </View>
+      <View style={styles.streakCard}>
+        <Text style={styles.streakNumber}>{streak}</Text>
+        <Text style={styles.streakLabel}>day streak</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -134,5 +142,22 @@ const styles = StyleSheet.create({
     color: '#9a9ac0',
     minWidth: 34,
     textAlign: 'right',
+  },
+  streakCard: {
+    backgroundColor: '#6a6ac0',
+    borderRadius: 20,
+    paddingVertical: 24,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  streakNumber: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  streakLabel: {
+    fontSize: 14,
+    color: '#dcdcf5',
+    marginTop: 2,
   },
 });
