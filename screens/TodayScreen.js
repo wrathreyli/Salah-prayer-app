@@ -4,6 +4,7 @@ import PrayerCard from '../components/PrayerCard';
 import { useEffect, useState } from 'react';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getNextPrayer } from '../utils/nextPrayer';
 
 // Returns today's date as a string like "2026-07-24".
 function getTodayKey() {
@@ -19,6 +20,7 @@ export default function TodayScreen() {
   const [loading, setLoading] = useState(true);
   const [locationName, setLocationName] = useState('Loading location...');
   const [completed, setCompleted] = useState([]);
+  const [nextPrayer, setNextPrayer] = useState(null);
 
   // Fetch prayer times on load.
   useEffect(() => {
@@ -66,6 +68,28 @@ export default function TodayScreen() {
     loadCompleted();
   }, []);
 
+  // Figure out which prayer is next, and keep it updated every minute.
+  useEffect(() => {
+    if (!timings) return;
+
+    const prayerList = [
+      { name: 'Fajr', time: timings.Fajr },
+      { name: 'Dhuhr', time: timings.Dhuhr },
+      { name: 'Asr', time: timings.Asr },
+      { name: 'Maghrib', time: timings.Maghrib },
+      { name: 'Isha', time: timings.Isha },
+    ];
+
+    function update() {
+      setNextPrayer(getNextPrayer(prayerList));
+    }
+
+    update();
+    const timer = setInterval(update, 60000);
+
+    return () => clearInterval(timer);
+  }, [timings]);
+
   // Save to the device.
   async function saveCompleted(newList) {
     try {
@@ -76,6 +100,27 @@ export default function TodayScreen() {
   }
 
   // Toggle a prayer, then save the result.
+  useEffect(() => {
+    if (!timings) return;
+
+    const prayerList = [
+      { name: 'Fajr', time: timings.Fajr },
+      { name: 'Dhuhr', time: timings.Dhuhr },
+      { name: 'Asr', time: timings.Asr },
+      { name: 'Maghrib', time: timings.Maghrib },
+      { name: 'Isha', time: timings.Isha },
+    ];
+
+    function update() {
+      setNextPrayer(getNextPrayer(prayerList));
+    }
+
+    update();
+    const timer = setInterval(update, 60000);
+
+    return () => clearInterval(timer);
+  }, [timings]);
+  
   function toggleCompleted(prayerName) {
     let newList;
     if (completed.includes(prayerName)) {
@@ -111,6 +156,15 @@ export default function TodayScreen() {
         <Text style={styles.subtitle}>{locationName}</Text>
         <Text style={styles.date}>{completed.length} of 5 completed today</Text>
       </View>
+      {nextPrayer && (
+        <View style={styles.nextCard}>
+          <Text style={styles.nextLabel}>NEXT PRAYER</Text>
+          <Text style={styles.nextName}>{nextPrayer.name}</Text>
+          <Text style={styles.nextTime}>
+            in {nextPrayer.hoursLeft}h {nextPrayer.minutesLeft}m
+          </Text>
+        </View>
+      )}
       <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
         {prayers.map((prayer) => (
           <PrayerCard
@@ -138,4 +192,27 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 16, color: '#9a9ac0', marginTop: 2 },
   date: { fontSize: 14, color: '#b0b0c8', marginTop: 8 },
   list: { flex: 1 },
+  nextCard: {
+    backgroundColor: '#6a6ac0',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  nextLabel: {
+    fontSize: 12,
+    color: '#dcdcf5',
+    letterSpacing: 1,
+  },
+  nextName: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginTop: 4,
+  },
+  nextTime: {
+    fontSize: 16,
+    color: '#dcdcf5',
+    marginTop: 2,
+  },
 });
