@@ -1,17 +1,8 @@
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { calculateStreak } from '../utils/streak';
-
-// Build a storage key for a given date.
-function getKeyForDate(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `prayers-${year}-${month}-${day}`;
-}
+import { calculateStreak, getKeyForDate } from '../utils/streak';
 
 // Format a date like "Fri, 24 Jul".
 function formatDate(date) {
