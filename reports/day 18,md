@@ -1,0 +1,57 @@
+# Day 18 — Qibla Compass (Device Sensors)
+
+## Goal
+Add a Qibla feature: a live compass that points toward the Kaaba in Mecca,
+using the phone's magnetometer and the user's GPS location.
+
+## Why This Matters
+Knowing the Qibla direction is essential for prayer, and it's a natural,
+on-theme feature for a Salah app. It also meant learning something new —
+reading device sensors, which none of the earlier features used.
+
+## What I Built
+1. **`utils/qibla.js`** — a helper that calculates the compass bearing from the
+   user's coordinates to the Kaaba (21.4225°N, 39.8262°E) using the great-circle
+   initial bearing formula. Returns a bearing normalized to 0–360°.
+2. **`screens/QiblaScreen.js`** — the compass screen:
+   - Gets the user's location once and computes the Qibla bearing.
+   - Subscribes to the magnetometer (`expo-sensors`) to read which way the
+     phone is pointing, updating every 100ms.
+   - Rotates an arrow by `(qiblaBearing − phoneHeading)` so it always points to
+     Mecca regardless of how the phone is turned.
+   - Handles the location-permission-denied case with a clear message.
+   - Fully themed (light/dark) like the rest of the app.
+3. **Wired it into the tab navigator** in `App.js` as a fourth tab.
+
+## New Package
+- `expo-sensors` (installed via `npx expo install expo-sensors`) — provides the
+  Magnetometer API.
+
+## Files Changed
+- `utils/qibla.js` (new)
+- `screens/QiblaScreen.js` (new)
+- `App.js`
+
+## Result
+- A working Qibla tab. In Istanbul it reads ~65° from North (southeast toward
+  Mecca), which matches reality.
+- The arrow tracks the phone's rotation in real time.
+
+## Known Issue / Next Step
+- The arrow is a bit laggy/jittery because it re-renders on every 100ms
+  magnetometer reading. Can be smoothed later by throttling updates or applying
+  rotation smoothing (interpolating between readings). Noted for a future polish
+  pass.
+
+## Debugging Notes (lessons from today)
+- Hit an "Unable to resolve module ./screens/QiblaScreen" error — the file had
+  been created in `utils/` instead of `screens/`. Moving it to the correct
+  folder fixed it. The import path must match the file's actual location.
+- Also learned that tunnel mode (`--tunnel`) can be flaky; local mode
+  (`npx expo start -c`) is more reliable when phone and computer share Wi-Fi.
+
+## What I Learned
+- How to read a device sensor (magnetometer) via `expo-sensors` and subscribe/
+  unsubscribe cleanly in a `useEffect`.
+- The great-circle bearing formula for pointing from one lat/lng to another.
+- Sensor-driven UI needs smoothing — raw readings update too fast for a calm UI.
