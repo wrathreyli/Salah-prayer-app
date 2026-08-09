@@ -1,7 +1,8 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import PrayerCard from '../components/PrayerCard';
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getNextPrayer } from '../utils/nextPrayer';
@@ -22,51 +23,61 @@ export default function TodayScreen() {
   const [completed, setCompleted] = useState([]);
   const [nextPrayer, setNextPrayer] = useState(null);
 
-  // Fetch prayer times on load.
-  useEffect(() => {
-    async function loadPrayerTimes() {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
+  // Fetch prayer times every time this screen is focused.
+  useFocusEffect(
+    useCallback(() => {
+      async function loadPrayerTimes() {
+        try {
+          // Read the user's chosen calculation method (default 13 = Diyanet).
+          let method = 13;
+          const savedMethod = await AsyncStorage.getItem('calculationMethod');
+          if (savedMethod !== null) {
+            method = Number(savedMethod);
+          }
 
-        let url;
-        if (status === 'granted') {
-          const location = await Location.getCurrentPositionAsync({});
-          const lat = location.coords.latitude;
-          const lng = location.coords.longitude;
-          url = `https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=13`;
-          setLocationName('Your location');
-        } else {
-          url =
-            'https://api.aladhan.com/v1/timingsByCity?city=Istanbul&country=Turkey&method=13';
-          setLocationName('Istanbul, Turkey (default)');
+          const { status } = await Location.requestForegroundPermissionsAsync();
+
+          let url;
+          if (status === 'granted') {
+            const location = await Location.getCurrentPositionAsync({});
+            const lat = location.coords.latitude;
+            const lng = location.coords.longitude;
+            url = `https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=${method}`;
+            setLocationName('Your location');
+          } else {
+            url = `https://api.aladhan.com/v1/timingsByCity?city=Istanbul&country=Turkey&method=${method}`;
+            setLocationName('Istanbul, Turkey (default)');
+          }
+
+          const response = await fetch(url);
+          const data = await response.json();
+          setTimings(data.data.timings);
+          setLoading(false);
+        } catch (error) {
+          console.log('Error:', error);
+          setLoading(false);
         }
-
-        const response = await fetch(url);
-        const data = await response.json();
-        setTimings(data.data.timings);
-        setLoading(false);
-      } catch (error) {
-        console.log('Error:', error);
-        setLoading(false);
       }
-    }
-    loadPrayerTimes();
-  }, []);
+      loadPrayerTimes();
+    }, [])
+  );
 
-  // Load today's saved completions from the device.
-  useEffect(() => {
-    async function loadCompleted() {
-      try {
-        const saved = await AsyncStorage.getItem(getTodayKey());
-        if (saved !== null) {
-          setCompleted(JSON.parse(saved));
+  // Load today's saved completions every time this screen is focused.
+  useFocusEffect(
+    useCallback(() => {
+      async function loadCompleted() {
+        try {
+          const saved = await AsyncStorage.getItem(getTodayKey());
+          if (saved !== null) {
+            setCompleted(JSON.parse(saved));
+          }
+        } catch (error) {
+          console.log('Error loading saved data:', error);
         }
-      } catch (error) {
-        console.log('Error loading saved data:', error);
       }
-    }
-    loadCompleted();
-  }, []);
+      loadCompleted();
+    }, [])
+  );
 
   // Figure out which prayer is next, and keep it updated every minute.
   useEffect(() => {
@@ -99,28 +110,6 @@ export default function TodayScreen() {
     }
   }
 
-  // Toggle a prayer, then save the result.
-  useEffect(() => {
-    if (!timings) return;
-
-    const prayerList = [
-      { name: 'Fajr', time: timings.Fajr },
-      { name: 'Dhuhr', time: timings.Dhuhr },
-      { name: 'Asr', time: timings.Asr },
-      { name: 'Maghrib', time: timings.Maghrib },
-      { name: 'Isha', time: timings.Isha },
-    ];
-
-    function update() {
-      setNextPrayer(getNextPrayer(prayerList));
-    }
-
-    update();
-    const timer = setInterval(update, 60000);
-
-    return () => clearInterval(timer);
-  }, [timings]);
-  
   function toggleCompleted(prayerName) {
     let newList;
     if (completed.includes(prayerName)) {
