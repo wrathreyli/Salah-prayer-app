@@ -1,6 +1,7 @@
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../utils/ThemeContext';
 
 // The calculation methods we support, with their Aladhan API ids.
 const METHODS = [
@@ -15,6 +16,9 @@ const METHODS = [
 const STORAGE_KEY = 'calculationMethod';
 
 export default function SettingsScreen() {
+  const { colors, mode, toggleTheme } = useTheme();
+  const styles = makeStyles(colors);
+
   const [selected, setSelected] = useState(13); // default: Diyanet
 
   // Load the saved method when the screen opens.
@@ -46,10 +50,26 @@ export default function SettingsScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Settings</Text>
-        <Text style={styles.subtitle}>Calculation Method</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Dark mode toggle */}
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleText}>
+            <Text style={styles.toggleLabel}>Dark Mode</Text>
+            <Text style={styles.toggleDesc}>
+              {mode === 'dark' ? 'On' : 'Off'}
+            </Text>
+          </View>
+          <Switch
+            value={mode === 'dark'}
+            onValueChange={toggleTheme}
+            trackColor={{ false: colors.dot, true: colors.accent }}
+            thumbColor={colors.card}
+          />
+        </View>
+
+        <Text style={styles.sectionTitle}>Calculation Method</Text>
         <Text style={styles.hint}>
           Prayer times vary by calculation method. Pick the one used in your region.
         </Text>
@@ -86,42 +106,65 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fdfcff',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-  },
-  header: { marginBottom: 20 },
-  title: { fontSize: 34, fontWeight: 'bold', color: '#3a3a5a' },
-  subtitle: { fontSize: 16, color: '#9a9ac0', marginTop: 2 },
-  hint: { fontSize: 14, color: '#b0b0c8', marginBottom: 16, lineHeight: 20 },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 2,
-    borderColor: '#f0f0f5',
-  },
-  cardSelected: {
-    borderColor: '#6a6ac0',
-    backgroundColor: '#f4f4ff',
-  },
-  cardText: { flex: 1 },
-  methodName: { fontSize: 17, fontWeight: '600', color: '#3a3a5a' },
-  methodNameSelected: { color: '#6a6ac0' },
-  methodDesc: { fontSize: 13, color: '#9a9ac0', marginTop: 2 },
-  check: { fontSize: 22, color: '#6a6ac0', fontWeight: 'bold', marginLeft: 12 },
-  footer: {
-    fontSize: 13,
-    color: '#b0b0c8',
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 30,
-  },
-});
+// Styles are built from the active theme's colors.
+function makeStyles(colors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingTop: 60,
+      paddingHorizontal: 20,
+    },
+    header: { marginBottom: 20 },
+    title: { fontSize: 34, fontWeight: 'bold', color: colors.title },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.subtitle,
+      marginTop: 8,
+      marginBottom: 8,
+    },
+    hint: { fontSize: 14, color: colors.muted, marginBottom: 16, lineHeight: 20 },
+    toggleRow: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 20,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderWidth: 2,
+      borderColor: colors.cardBorder,
+    },
+    toggleText: { flex: 1 },
+    toggleLabel: { fontSize: 17, fontWeight: '600', color: colors.text },
+    toggleDesc: { fontSize: 13, color: colors.subtitle, marginTop: 2 },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderWidth: 2,
+      borderColor: colors.cardBorder,
+    },
+    cardSelected: {
+      borderColor: colors.accent,
+      backgroundColor: colors.cardCompleted,
+    },
+    cardText: { flex: 1 },
+    methodName: { fontSize: 17, fontWeight: '600', color: colors.text },
+    methodNameSelected: { color: colors.accent },
+    methodDesc: { fontSize: 13, color: colors.subtitle, marginTop: 2 },
+    check: { fontSize: 22, color: colors.accent, fontWeight: 'bold', marginLeft: 12 },
+    footer: {
+      fontSize: 13,
+      color: colors.muted,
+      textAlign: 'center',
+      marginTop: 8,
+      marginBottom: 30,
+    },
+  });
+}

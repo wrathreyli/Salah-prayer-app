@@ -6,6 +6,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getNextPrayer } from '../utils/nextPrayer';
+import { useTheme } from '../utils/ThemeContext';
 
 // Returns today's date as a string like "2026-07-24".
 function getTodayKey() {
@@ -17,6 +18,9 @@ function getTodayKey() {
 }
 
 export default function TodayScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
+
   const [timings, setTimings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [locationName, setLocationName] = useState('Loading location...');
@@ -139,7 +143,7 @@ export default function TodayScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="dark" />
+      <StatusBar style={colors.statusBar} />
       <View style={styles.header}>
         <Text style={styles.title}>Prayer Times</Text>
         <Text style={styles.subtitle}>{locationName}</Text>
@@ -169,39 +173,42 @@ export default function TodayScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fdfcff',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-  },
-  header: { marginBottom: 24 },
-  title: { fontSize: 34, fontWeight: 'bold', color: '#3a3a5a' },
-  subtitle: { fontSize: 16, color: '#9a9ac0', marginTop: 2 },
-  date: { fontSize: 14, color: '#b0b0c8', marginTop: 8 },
-  list: { flex: 1 },
-  nextCard: {
-    backgroundColor: '#6a6ac0',
-    borderRadius: 20,
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  nextLabel: {
-    fontSize: 12,
-    color: '#dcdcf5',
-    letterSpacing: 1,
-  },
-  nextName: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginTop: 4,
-  },
-  nextTime: {
-    fontSize: 16,
-    color: '#dcdcf5',
-    marginTop: 2,
-  },
-});
+// Styles are built from the active theme's colors.
+function makeStyles(colors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingTop: 60,
+      paddingHorizontal: 20,
+    },
+    header: { marginBottom: 24 },
+    title: { fontSize: 34, fontWeight: 'bold', color: colors.title },
+    subtitle: { fontSize: 16, color: colors.subtitle, marginTop: 2 },
+    date: { fontSize: 14, color: colors.muted, marginTop: 8 },
+    list: { flex: 1 },
+    nextCard: {
+      backgroundColor: colors.accent,
+      borderRadius: 20,
+      padding: 20,
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    nextLabel: {
+      fontSize: 12,
+      color: colors.accentMuted,
+      letterSpacing: 1,
+    },
+    nextName: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.accentText,
+      marginTop: 4,
+    },
+    nextTime: {
+      fontSize: 16,
+      color: colors.accentMuted,
+      marginTop: 2,
+    },
+  });
+}
