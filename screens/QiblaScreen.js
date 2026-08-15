@@ -2,12 +2,20 @@ import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import * as Location from 'expo-location';
 import { useTheme } from '../utils/ThemeContext';
-import { angleDifference, getQiblaBearing, smoothAngle } from '../utils/qibla';
+import {
+  adaptiveWeight,
+  angleDifference,
+  getQiblaBearing,
+  smoothAngle,
+} from '../utils/qibla';
+import { alignedFeedback } from '../utils/haptics';
 
-// How much of each new reading to trust. Lower = smoother but laggier.
-const SMOOTHING = 0.15;
-// Within this many degrees, we call it "facing the Qibla".
-const ALIGNED_WITHIN = 5;
+// Alignment uses two thresholds, not one. You have to get within ALIGN_ENTER
+// to count as facing the Qibla, but you don't lose it until you drift past
+// ALIGN_EXIT. Without that gap, hovering right on the boundary would flicker
+// the state — and buzz — several times a second.
+const ALIGN_ENTER = 5;
+const ALIGN_EXIT = 8;
 
 export default function QiblaScreen() {
   const { colors } = useTheme();
@@ -64,14 +72,16 @@ export default function QiblaScreen() {
             reading.trueHeading >= 0 ? reading.trueHeading : reading.magHeading;
 
           // Nudge the running average toward the new reading instead of
-          // jumping to it. This is what kills the jitter.
+          // jumping to it. This is what kills the jitter. How big a nudge
+          // depends on how far the reading moved — see adaptiveWeight.
           if (smoothedRef.current === null) {
             smoothedRef.current = heading;
           } else {
+            const turn = angleDifference(smoothedRef.current, heading);
             smoothedRef.current = smoothAngle(
               smoothedRef.current,
               heading,
-              SMOOTHING
+              adaptiveWeight(turn)
             );
           }
 
@@ -88,11 +98,17 @@ export default function QiblaScreen() {
           const offBy = Math.abs(angleDifference(smoothedRef.current, qiblaRef.current));
 
           // Only re-render when the aligned state actually flips, not on
-          // every single reading.
-          const isAligned = offBy <= ALIGNED_WITHIN;
+          // every single reading. Which threshold applies depends on which
+          // state we're currently in.
+          const isAligned = alignedRef.current
+            ? offBy <= ALIGN_EXIT
+            : offBy <= ALIGN_ENTER;
+
           if (isAligned !== alignedRef.current) {
             alignedRef.current = isAligned;
             setAligned(isAligned);
+            // Buzz on the way in only — leaving needs no announcement.
+            if (isAligned) alignedFeedback();
           }
 
           // Animate along the shortest path. Without unwrapping, crossing

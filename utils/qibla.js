@@ -44,3 +44,24 @@ export function smoothAngle(current, target, weight) {
   const next = current + angleDifference(current, target) * weight;
   return (next + 360) % 360;
 }
+
+// How much a reading has to move before we treat the phone as turning.
+const STILL_DEGREES = 1;
+// ...and the point at which we treat it as turning fast.
+const FAST_DEGREES = 12;
+const MIN_WEIGHT = 0.06;
+const MAX_WEIGHT = 0.45;
+
+// Pick a smoothing weight from how far the reading jumped.
+//
+// A single fixed weight can't win: heavy smoothing is calm when the phone is
+// still but feels laggy when you turn, and light smoothing is responsive but
+// twitches when you're holding steady. So filter hard when nothing is moving
+// (that movement is noise) and barely at all when the phone is really turning
+// (that movement is real).
+export function adaptiveWeight(turnDegrees) {
+  const span = FAST_DEGREES - STILL_DEGREES;
+  const position = (Math.abs(turnDegrees) - STILL_DEGREES) / span;
+  const clamped = Math.min(1, Math.max(0, position));
+  return MIN_WEIGHT + clamped * (MAX_WEIGHT - MIN_WEIGHT);
+}

@@ -1,4 +1,4 @@
-# Day 21 — Animation Day
+# Day 21 
 
 ## Goal
 Two open loops, one theme. Smooth the jittery Qibla arrow from Day 18, and make

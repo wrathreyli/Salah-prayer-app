@@ -11,6 +11,7 @@ import {
   schedulePrayerNotifications,
   setRemindersEnabled,
 } from '../utils/notifications';
+import { areHapticsEnabled, setHapticsEnabled } from '../utils/haptics';
 
 // The calculation methods we support, with their Aladhan API ids.
 const METHODS = [
@@ -30,6 +31,7 @@ export default function SettingsScreen() {
 
   const [selected, setSelected] = useState(13); // default: Diyanet
   const [reminders, setReminders] = useState(false);
+  const [haptics, setHaptics] = useState(true);
 
   // Load the saved method when the screen opens.
   useEffect(() => {
@@ -53,6 +55,19 @@ export default function SettingsScreen() {
     }
     loadReminders();
   }, []);
+
+  // Load the haptics preference.
+  useEffect(() => {
+    async function loadHaptics() {
+      setHaptics(await areHapticsEnabled());
+    }
+    loadHaptics();
+  }, []);
+
+  async function toggleHaptics(value) {
+    setHaptics(value);
+    await setHapticsEnabled(value);
+  }
 
   // Turn the five daily prayer reminders on or off.
   async function toggleReminders(value) {
@@ -137,6 +152,22 @@ export default function SettingsScreen() {
           <Switch
             value={reminders}
             onValueChange={toggleReminders}
+            trackColor={{ false: colors.dot, true: colors.accent }}
+            thumbColor={colors.card}
+          />
+        </View>
+
+        {/* Haptic feedback toggle */}
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleText}>
+            <Text style={styles.toggleLabel}>Vibration</Text>
+            <Text style={styles.toggleDesc}>
+              {haptics ? 'Buzz when you face the Qibla' : 'Off'}
+            </Text>
+          </View>
+          <Switch
+            value={haptics}
+            onValueChange={toggleHaptics}
             trackColor={{ false: colors.dot, true: colors.accent }}
             thumbColor={colors.card}
           />
