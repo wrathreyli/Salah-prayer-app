@@ -28,3 +28,19 @@ export function getQiblaBearing(latitude, longitude) {
   bearing = (bearing + 360) % 360;
   return bearing;
 }
+
+// The shortest signed turn from angle `from` to angle `to`, in the range
+// (-180, 180]. Going from 350° to 10° is +20°, not -340°.
+export function angleDifference(from, to) {
+  return ((((to - from) % 360) + 540) % 360) - 180;
+}
+
+// Low-pass filter for a compass angle: move `current` a fraction of the way
+// toward `target`. A smaller `weight` means smoother but laggier.
+//
+// It has to work on the shortest turn, otherwise every pass through North
+// makes the needle spin all the way around the dial.
+export function smoothAngle(current, target, weight) {
+  const next = current + angleDifference(current, target) * weight;
+  return (next + 360) % 360;
+}

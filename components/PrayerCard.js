@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Animated, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { useEffect, useRef } from 'react';
 import { useTheme } from '../utils/ThemeContext';
 
 export default function PrayerCard({
@@ -11,16 +12,29 @@ export default function PrayerCard({
   const { colors } = useTheme();
   const styles = makeStyles(colors);
 
+  // Fade the highlight ring in and out instead of snapping it on.
+  const glow = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(glow, {
+      toValue: highlighted ? 1 : 0,
+      duration: highlighted ? 250 : 600,
+      useNativeDriver: true,
+    }).start();
+  }, [highlighted, glow]);
+
   return (
     <TouchableOpacity
-      style={[
-        styles.card,
-        completed && styles.cardCompleted,
-        highlighted && styles.cardHighlighted,
-      ]}
+      style={[styles.card, completed && styles.cardCompleted]}
       onPress={onPress}
       activeOpacity={0.7}
     >
+      {/* Sits on top of the card, so its opacity can animate on the native
+          driver — border colors can't. */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.highlightRing, { opacity: glow }]}
+      />
       <View style={styles.left}>
         <View style={[styles.circle, completed && styles.circleFilled]}>
           {completed && <Text style={styles.check}>✓</Text>}
@@ -59,10 +73,12 @@ function makeStyles(colors) {
       backgroundColor: colors.cardCompleted,
       borderColor: colors.cardBorderCompleted,
     },
-    // Shown briefly when the user arrives from a notification tap.
-    cardHighlighted: {
-      borderColor: colors.accent,
+    // Fades in briefly when the user arrives from a notification tap.
+    highlightRing: {
+      ...StyleSheet.absoluteFillObject,
+      borderRadius: 16,
       borderWidth: 2,
+      borderColor: colors.accent,
     },
     left: {
       flexDirection: 'row',
