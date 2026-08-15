@@ -1,4 +1,4 @@
-# Day 20 — Closing the Notification Loops
+# Day 20 
 
 ## Goal
 Fix the two issues I logged at the end of Day 19:
@@ -85,11 +85,5 @@ Settings, the scheduler), which is what finally justified the helper.
 - Navigating from outside the component tree needs a **navigation container
   ref**, and the ref isn't usable until the container reports ready. Cold starts
   are where that ordering actually bites.
-- `useLastNotificationResponse()` collapses two separate problems (app running
-  vs. app launched by tap) into one API. Worth knowing before hand-rolling a
-  listener plus a `getLastNotificationResponseAsync` check.
-- Recurring triggers are all-or-nothing. When you need an exception to a
-  repeating schedule, you model it by **changing the trigger type**, not by
-  trying to suppress one occurrence.
 - Route params are state you have to clean up. Leaving `prayer` set meant the
   highlight came back every time the tab regained focus.
