@@ -1,8 +1,15 @@
-function timeToMinutes(timeString) {
+// Turn an API time string like "05:23" or "05:23 (+03)" into { hours, minutes }.
+export function parsePrayerTime(timeString) {
   const clean = timeString.split(' ')[0];
   const parts = clean.split(':');
-  const hours = parseInt(parts[0], 10);
-  const minutes = parseInt(parts[1], 10);
+  return {
+    hours: parseInt(parts[0], 10),
+    minutes: parseInt(parts[1], 10),
+  };
+}
+
+function timeToMinutes(timeString) {
+  const { hours, minutes } = parsePrayerTime(timeString);
   return hours * 60 + minutes;
 }
 

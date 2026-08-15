@@ -7,6 +7,11 @@ import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getNextPrayer } from '../utils/nextPrayer';
 import { useTheme } from '../utils/ThemeContext';
+import {
+  LAST_TIMINGS_KEY,
+  areRemindersEnabled,
+  schedulePrayerNotifications,
+} from '../utils/notifications';
 
 // Returns today's date as a string like "2026-07-24".
 function getTodayKey() {
@@ -55,8 +60,18 @@ export default function TodayScreen() {
 
           const response = await fetch(url);
           const data = await response.json();
-          setTimings(data.data.timings);
+          const newTimings = data.data.timings;
+          setTimings(newTimings);
           setLoading(false);
+
+          // Keep the reminder schedule in step with today's actual times.
+          await AsyncStorage.setItem(
+            LAST_TIMINGS_KEY,
+            JSON.stringify(newTimings)
+          );
+          if (await areRemindersEnabled()) {
+            await schedulePrayerNotifications(newTimings);
+          }
         } catch (error) {
           console.log('Error:', error);
           setLoading(false);

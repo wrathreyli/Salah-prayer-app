@@ -1,7 +1,15 @@
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../utils/ThemeContext';
+import {
+  LAST_TIMINGS_KEY,
+  areRemindersEnabled,
+  cancelPrayerNotifications,
+  requestNotificationPermission,
+  schedulePrayerNotifications,
+  setRemindersEnabled,
+} from '../utils/notifications';
 
 // The calculation methods we support, with their Aladhan API ids.
 const METHODS = [
@@ -20,6 +28,7 @@ export default function SettingsScreen() {
   const styles = makeStyles(colors);
 
   const [selected, setSelected] = useState(13); // default: Diyanet
+  const [reminders, setReminders] = useState(false);
 
   // Load the saved method when the screen opens.
   useEffect(() => {
@@ -35,6 +44,48 @@ export default function SettingsScreen() {
     }
     loadMethod();
   }, []);
+
+  // Load whether prayer reminders are switched on.
+  useEffect(() => {
+    async function loadReminders() {
+      setReminders(await areRemindersEnabled());
+    }
+    loadReminders();
+  }, []);
+
+  // Turn the five daily prayer reminders on or off.
+  async function toggleReminders(value) {
+    if (!value) {
+      setReminders(false);
+      await setRemindersEnabled(false);
+      await cancelPrayerNotifications();
+      return;
+    }
+
+    const granted = await requestNotificationPermission();
+    if (!granted) {
+      Alert.alert(
+        'Notifications are off',
+        'Allow notifications for this app in your phone settings to get prayer reminders.'
+      );
+      return;
+    }
+
+    setReminders(true);
+    await setRemindersEnabled(true);
+
+    // Schedule straight away using the times the Today screen last loaded.
+    // If there aren't any yet, the Today screen will schedule them on its
+    // next fetch.
+    try {
+      const saved = await AsyncStorage.getItem(LAST_TIMINGS_KEY);
+      if (saved !== null) {
+        await schedulePrayerNotifications(JSON.parse(saved));
+      }
+    } catch (error) {
+      console.log('Error scheduling reminders:', error);
+    }
+  }
 
   // Save the chosen method to the device.
   async function chooseMethod(id) {
@@ -64,6 +115,24 @@ export default function SettingsScreen() {
           <Switch
             value={mode === 'dark'}
             onValueChange={toggleTheme}
+            trackColor={{ false: colors.dot, true: colors.accent }}
+            thumbColor={colors.card}
+          />
+        </View>
+
+        {/* Prayer reminder toggle */}
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleText}>
+            <Text style={styles.toggleLabel}>Prayer Reminders</Text>
+            <Text style={styles.toggleDesc}>
+              {reminders
+                ? 'A notification at each prayer time'
+                : 'Off'}
+            </Text>
+          </View>
+          <Switch
+            value={reminders}
+            onValueChange={toggleReminders}
             trackColor={{ false: colors.dot, true: colors.accent }}
             thumbColor={colors.card}
           />
