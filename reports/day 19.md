@@ -2,10 +2,7 @@
 
 ## Goal
 Send a local notification at each of the five prayer times, with an on/off
-toggle in Settings that remembers the user's choice.
-
-## Why This Matters
-Until now the app only worked if you opened it. A prayer app that can't remind
+toggle in Settings that remembers the user's choice, Until now the app only worked if you opened it. A prayer app that can't remind
 you is missing the point — the reminder is the whole reason to install it. This
 also turns the streak feature from something you have to remember into
 something the phone prompts you to keep.
@@ -47,24 +44,12 @@ a safety net for days the app isn't opened at all.
 That's also why Settings stores `lastTimings` — the toggle can schedule
 straight away without doing its own location + network work.
 
-## New Package
-- `expo-notifications` (via `npx expo install expo-notifications`).
-- Added the `expo-notifications` plugin to `app.json` with the app's accent
-  color for the Android notification icon.
-
-## Files Changed
-- `utils/notifications.js` (new)
-- `utils/nextPrayer.js` (exported `parsePrayerTime`)
-- `screens/SettingsScreen.js`
-- `screens/TodayScreen.js`
-- `app.json`
-
 ## Result
 - Bundles clean (`npx expo export --platform android`, 1000 modules, no errors).
 - Toggling reminders on schedules five daily notifications; toggling off
   cancels them.
 
-## Known Issue / Next Step
+## Issue 
 - Tapping a notification just opens the app on whatever tab was last open. It
   should deep-link to Today and ideally pre-select that prayer. That needs a
   `addNotificationResponseReceivedListener` plus a navigation ref in `App.js` —
@@ -78,8 +63,3 @@ straight away without doing its own location + network work.
   planning anything push-based.
 - Android needs a notification *channel* before it will display anything; iOS
   has no such concept. Same code, different platform requirement.
-- Permission code should check `getPermissionsAsync()` before calling
-  `requestPermissionsAsync()` — once a user denies, re-prompting does nothing
-  (`canAskAgain` is false), so the app has to explain rather than re-ask.
-- Recurring schedules based on data that changes need a refresh strategy. The
-  schedule isn't the source of truth; the API is.

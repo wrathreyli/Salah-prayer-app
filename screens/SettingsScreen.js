@@ -6,6 +6,7 @@ import {
   LAST_TIMINGS_KEY,
   areRemindersEnabled,
   cancelPrayerNotifications,
+  getCompletedToday,
   requestNotificationPermission,
   schedulePrayerNotifications,
   setRemindersEnabled,
@@ -80,7 +81,10 @@ export default function SettingsScreen() {
     try {
       const saved = await AsyncStorage.getItem(LAST_TIMINGS_KEY);
       if (saved !== null) {
-        await schedulePrayerNotifications(JSON.parse(saved));
+        await schedulePrayerNotifications(
+          JSON.parse(saved),
+          await getCompletedToday()
+        );
       }
     } catch (error) {
       console.log('Error scheduling reminders:', error);

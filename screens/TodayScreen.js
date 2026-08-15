@@ -7,22 +7,17 @@ import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getNextPrayer } from '../utils/nextPrayer';
 import { useTheme } from '../utils/ThemeContext';
+import { getKeyForDate } from '../utils/streak';
 import {
   LAST_TIMINGS_KEY,
-  areRemindersEnabled,
-  schedulePrayerNotifications,
+  getCompletedToday,
+  refreshPrayerNotifications,
 } from '../utils/notifications';
 
-// Returns today's date as a string like "2026-07-24".
-function getTodayKey() {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  return `prayers-${year}-${month}-${day}`;
-}
+// How long a prayer stays highlighted after arriving from a notification tap.
+const HIGHLIGHT_MS = 5000;
 
-export default function TodayScreen() {
+export default function TodayScreen({ route, navigation }) {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
 
@@ -31,6 +26,20 @@ export default function TodayScreen() {
   const [locationName, setLocationName] = useState('Loading location...');
   const [completed, setCompleted] = useState([]);
   const [nextPrayer, setNextPrayer] = useState(null);
+  const [highlighted, setHighlighted] = useState(null);
+
+  // Arrived here from a notification tap — briefly highlight that prayer.
+  useEffect(() => {
+    const prayer = route.params?.prayer;
+    if (!prayer) return;
+
+    setHighlighted(prayer);
+    // Clear the param so coming back to this tab doesn't re-highlight.
+    navigation.setParams({ prayer: undefined });
+
+    const timer = setTimeout(() => setHighlighted(null), HIGHLIGHT_MS);
+    return () => clearTimeout(timer);
+  }, [route.params?.prayer, navigation]);
 
   // Fetch prayer times every time this screen is focused.
   useFocusEffect(
@@ -65,13 +74,16 @@ export default function TodayScreen() {
           setLoading(false);
 
           // Keep the reminder schedule in step with today's actual times.
+          // Completions are read from storage rather than state, because this
+          // effect and the one below load independently.
           await AsyncStorage.setItem(
             LAST_TIMINGS_KEY,
             JSON.stringify(newTimings)
           );
-          if (await areRemindersEnabled()) {
-            await schedulePrayerNotifications(newTimings);
-          }
+          await refreshPrayerNotifications(
+            newTimings,
+            await getCompletedToday()
+          );
         } catch (error) {
           console.log('Error:', error);
           setLoading(false);
@@ -85,14 +97,7 @@ export default function TodayScreen() {
   useFocusEffect(
     useCallback(() => {
       async function loadCompleted() {
-        try {
-          const saved = await AsyncStorage.getItem(getTodayKey());
-          if (saved !== null) {
-            setCompleted(JSON.parse(saved));
-          }
-        } catch (error) {
-          console.log('Error loading saved data:', error);
-        }
+        setCompleted(await getCompletedToday());
       }
       loadCompleted();
     }, [])
@@ -120,10 +125,17 @@ export default function TodayScreen() {
     return () => clearInterval(timer);
   }, [timings]);
 
-  // Save to the device.
+  // Save to the device, then bring the reminder schedule back in line so
+  // completed prayers don't buzz again later today.
   async function saveCompleted(newList) {
     try {
-      await AsyncStorage.setItem(getTodayKey(), JSON.stringify(newList));
+      await AsyncStorage.setItem(
+        getKeyForDate(new Date()),
+        JSON.stringify(newList)
+      );
+      if (timings) {
+        await refreshPrayerNotifications(timings, newList);
+      }
     } catch (error) {
       console.log('Error saving:', error);
     }
@@ -180,6 +192,7 @@ export default function TodayScreen() {
             name={prayer.name}
             time={prayer.time}
             completed={completed.includes(prayer.name)}
+            highlighted={highlighted === prayer.name}
             onPress={() => toggleCompleted(prayer.name)}
           />
         ))}

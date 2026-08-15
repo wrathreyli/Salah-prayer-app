@@ -1,13 +1,23 @@
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { useTheme } from '../utils/ThemeContext';
 
-export default function PrayerCard({ name, time, completed, onPress }) {
+export default function PrayerCard({
+  name,
+  time,
+  completed,
+  highlighted,
+  onPress,
+}) {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
 
   return (
     <TouchableOpacity
-      style={[styles.card, completed && styles.cardCompleted]}
+      style={[
+        styles.card,
+        completed && styles.cardCompleted,
+        highlighted && styles.cardHighlighted,
+      ]}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -48,6 +58,11 @@ function makeStyles(colors) {
     cardCompleted: {
       backgroundColor: colors.cardCompleted,
       borderColor: colors.cardBorderCompleted,
+    },
+    // Shown briefly when the user arrives from a notification tap.
+    cardHighlighted: {
+      borderColor: colors.accent,
+      borderWidth: 2,
     },
     left: {
       flexDirection: 'row',
