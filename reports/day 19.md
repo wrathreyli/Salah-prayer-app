@@ -1,4 +1,4 @@
-# Day 19 — Prayer Time Notifications
+# Day 19 
 
 ## Goal
 Send a local notification at each of the five prayer times, with an on/off

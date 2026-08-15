@@ -1,4 +1,4 @@
-# Day 22 — Qibla Haptics and Adaptive Smoothing
+# Day 22 
 
 ## Goal
 Finish the two notes I left at the end of Day 21: a buzz when the compass lines
@@ -11,26 +11,12 @@ a screen while rotating your whole body. Feeling the moment you line up is
 better than watching for it. That's the actual job haptics does here — it's not
 a flourish.
 
-## Part 1 — Haptics
+## Haptics
 
 `npx expo install expo-haptics`, then `Haptics.notificationAsync(Success)` on the
 moment alignment becomes true.
 
 The interesting part wasn't the buzz, it was **not** buzzing:
-
-### Hysteresis
-Alignment was a single 5° threshold. Hovering right on the boundary — which is
-exactly what you do when lining up — flipped the state back and forth several
-times a second. Visually that's a flicker; with haptics it's a machine-gun.
-
-So there are now two thresholds:
-- You have to get within **5°** to count as facing the Qibla.
-- You don't lose it until you drift past **8°**.
-
-The gap between them means the state can only change once per real movement.
-This is the same trick a thermostat uses so it doesn't click on and off around
-the set point.
-
 The buzz only fires on the way *in*. Leaving needs no announcement.
 
 ### A Vibration toggle in Settings
@@ -40,9 +26,6 @@ reads the setting on every call, which is cheap because alignment changes are
 rare events, and it means changing the setting takes effect immediately without
 the Qibla screen needing to reload anything.
 
-## Part 2 — Adaptive Smoothing
-
-Day 21 used a fixed weight of 0.15. The problem with any single value:
 - Heavy smoothing is calm when you hold still, but the arrow lags behind when
   you turn.
 - Light smoothing tracks your turn nicely, but twitches when you're still.
