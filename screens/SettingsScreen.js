@@ -2,8 +2,8 @@ import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Switch, Alert } f
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../utils/ThemeContext';
+import { getCachedTimings } from '../utils/prayerTimes';
 import {
-  LAST_TIMINGS_KEY,
   areRemindersEnabled,
   cancelPrayerNotifications,
   getCompletedToday,
@@ -90,14 +90,14 @@ export default function SettingsScreen() {
     setReminders(true);
     await setRemindersEnabled(true);
 
-    // Schedule straight away using the times the Today screen last loaded.
-    // If there aren't any yet, the Today screen will schedule them on its
-    // next fetch.
+    // Schedule straight away from the cached times, so this doesn't need its
+    // own network + location work. If nothing is cached yet, the Today screen
+    // will schedule them on its next fetch.
     try {
-      const saved = await AsyncStorage.getItem(LAST_TIMINGS_KEY);
-      if (saved !== null) {
+      const cached = await getCachedTimings();
+      if (cached) {
         await schedulePrayerNotifications(
-          JSON.parse(saved),
+          cached.timings,
           await getCompletedToday()
         );
       }

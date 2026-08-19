@@ -6,10 +6,6 @@ import { getKeyForDate } from './streak';
 
 export const NOTIFICATIONS_KEY = 'notificationsEnabled';
 
-// The Today screen stores the last prayer times it fetched here, so Settings
-// can schedule reminders without doing its own network + location work.
-export const LAST_TIMINGS_KEY = 'lastTimings';
-
 const CHANNEL_ID = 'prayer-reminders';
 
 // Decides what happens when a notification arrives while the app is open.

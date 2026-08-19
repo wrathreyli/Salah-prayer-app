@@ -1,15 +1,21 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import {
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import PrayerCard from '../components/PrayerCard';
 import { useState, useEffect, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getNextPrayer } from '../utils/nextPrayer';
 import { useTheme } from '../utils/ThemeContext';
-import { getKeyForDate } from '../utils/streak';
+import { formatDate, getKeyForDate } from '../utils/streak';
+import { loadPrayerTimes } from '../utils/prayerTimes';
 import {
-  LAST_TIMINGS_KEY,
   getCompletedToday,
   refreshPrayerNotifications,
 } from '../utils/notifications';
@@ -17,13 +23,25 @@ import {
 // How long a prayer stays highlighted after arriving from a notification tap.
 const HIGHLIGHT_MS = 5000;
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// "2026-08-18" -> "Aug 18". Split by hand rather than using `new Date(...)`,
+// which would parse the string as UTC and can land on the wrong day.
+function formatStaleDate(isoDate) {
+  const [, month, day] = isoDate.split('-');
+  return `${MONTHS[Number(month) - 1]} ${Number(day)}`;
+}
+
 export default function TodayScreen({ route, navigation }) {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
 
   const [timings, setTimings] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [locationName, setLocationName] = useState('Loading location...');
+  const [staleDate, setStaleDate] = useState(null); // set when showing cache
   const [completed, setCompleted] = useState([]);
   const [nextPrayer, setNextPrayer] = useState(null);
   const [highlighted, setHighlighted] = useState(null);
@@ -41,57 +59,40 @@ export default function TodayScreen({ route, navigation }) {
     return () => clearTimeout(timer);
   }, [route.params?.prayer, navigation]);
 
-  // Fetch prayer times every time this screen is focused.
+  // Load prayer times — from the network if we can, from the cache if not.
+  const refresh = useCallback(async () => {
+    const result = await loadPrayerTimes();
+
+    setTimings(result.timings);
+    setLocationName(result.locationName);
+    // Only call it stale if the cached day isn't today.
+    setStaleDate(
+      result.source === 'cache' && result.cachedDate !== formatDate(new Date())
+        ? result.cachedDate
+        : null
+    );
+    setLoading(false);
+
+    if (!result.timings) return;
+
+    // Keep the reminder schedule in step with the times we're showing.
+    // Completions are read from storage rather than state, because this
+    // and the effect below load independently.
+    await refreshPrayerNotifications(result.timings, await getCompletedToday());
+  }, []);
+
+  // Reload every time this screen is focused.
   useFocusEffect(
     useCallback(() => {
-      async function loadPrayerTimes() {
-        try {
-          // Read the user's chosen calculation method (default 13 = Diyanet).
-          let method = 13;
-          const savedMethod = await AsyncStorage.getItem('calculationMethod');
-          if (savedMethod !== null) {
-            method = Number(savedMethod);
-          }
-
-          const { status } = await Location.requestForegroundPermissionsAsync();
-
-          let url;
-          if (status === 'granted') {
-            const location = await Location.getCurrentPositionAsync({});
-            const lat = location.coords.latitude;
-            const lng = location.coords.longitude;
-            url = `https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=${method}`;
-            setLocationName('Your location');
-          } else {
-            url = `https://api.aladhan.com/v1/timingsByCity?city=Istanbul&country=Turkey&method=${method}`;
-            setLocationName('Istanbul, Turkey (default)');
-          }
-
-          const response = await fetch(url);
-          const data = await response.json();
-          const newTimings = data.data.timings;
-          setTimings(newTimings);
-          setLoading(false);
-
-          // Keep the reminder schedule in step with today's actual times.
-          // Completions are read from storage rather than state, because this
-          // effect and the one below load independently.
-          await AsyncStorage.setItem(
-            LAST_TIMINGS_KEY,
-            JSON.stringify(newTimings)
-          );
-          await refreshPrayerNotifications(
-            newTimings,
-            await getCompletedToday()
-          );
-        } catch (error) {
-          console.log('Error:', error);
-          setLoading(false);
-        }
-      }
-      loadPrayerTimes();
-    }, [])
+      refresh();
+    }, [refresh])
   );
+
+  async function onPullToRefresh() {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  }
 
   // Load today's saved completions every time this screen is focused.
   useFocusEffect(
@@ -160,6 +161,30 @@ export default function TodayScreen({ route, navigation }) {
     );
   }
 
+  // No network and nothing cached — the only state where we genuinely have
+  // nothing to show. Before, this fell through and crashed on `timings.Fajr`.
+  if (!timings) {
+    return (
+      <View style={styles.container}>
+        <StatusBar style={colors.statusBar} />
+        <View style={styles.header}>
+          <Text style={styles.title}>Prayer Times</Text>
+        </View>
+        <View style={styles.empty}>
+          <Text style={styles.emptyTitle}>No prayer times yet</Text>
+          <Text style={styles.emptyText}>
+            Connect to the internet once and they'll be saved for offline use.
+          </Text>
+          <TouchableOpacity style={styles.retry} onPress={onPullToRefresh}>
+            <Text style={styles.retryText}>
+              {refreshing ? 'Trying...' : 'Try again'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   const prayers = [
     { id: 1, name: 'Fajr', time: timings.Fajr },
     { id: 2, name: 'Dhuhr', time: timings.Dhuhr },
@@ -176,6 +201,14 @@ export default function TodayScreen({ route, navigation }) {
         <Text style={styles.subtitle}>{locationName}</Text>
         <Text style={styles.date}>{completed.length} of 5 completed today</Text>
       </View>
+      {staleDate && (
+        <View style={styles.staleBanner}>
+          <Text style={styles.staleText}>
+            Offline — showing saved times from {formatStaleDate(staleDate)}.
+            Pull down to retry.
+          </Text>
+        </View>
+      )}
       {nextPrayer && (
         <View style={styles.nextCard}>
           <Text style={styles.nextLabel}>NEXT PRAYER</Text>
@@ -185,7 +218,18 @@ export default function TodayScreen({ route, navigation }) {
           </Text>
         </View>
       )}
-      <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.list}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onPullToRefresh}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
+          />
+        }
+      >
         {prayers.map((prayer) => (
           <PrayerCard
             key={prayer.id}
@@ -215,6 +259,38 @@ function makeStyles(colors) {
     subtitle: { fontSize: 16, color: colors.subtitle, marginTop: 2 },
     date: { fontSize: 14, color: colors.muted, marginTop: 8 },
     list: { flex: 1 },
+    staleBanner: {
+      backgroundColor: colors.cardCompleted,
+      borderWidth: 1,
+      borderColor: colors.cardBorderCompleted,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 16,
+    },
+    staleText: { fontSize: 13, color: colors.subtitle, lineHeight: 19 },
+    empty: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingBottom: 60,
+    },
+    emptyTitle: { fontSize: 20, fontWeight: '600', color: colors.text },
+    emptyText: {
+      fontSize: 15,
+      color: colors.subtitle,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginTop: 8,
+      paddingHorizontal: 20,
+    },
+    retry: {
+      backgroundColor: colors.accent,
+      borderRadius: 14,
+      paddingVertical: 12,
+      paddingHorizontal: 28,
+      marginTop: 24,
+    },
+    retryText: { fontSize: 16, fontWeight: '600', color: colors.accentText },
     nextCard: {
       backgroundColor: colors.accent,
       borderRadius: 20,
