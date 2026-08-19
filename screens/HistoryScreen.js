@@ -2,6 +2,9 @@ import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-nati
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../utils/ThemeContext';
+import DayEditor from '../components/DayEditor';
+import { getCachedTimings } from '../utils/prayerTimes';
+import { refreshPrayerNotifications } from '../utils/notifications';
 import {
   PRAYER_NAMES,
   bestStreakFrom,
@@ -10,6 +13,7 @@ import {
   loadAllCompletions,
   monthDaysFrom,
   prayerBreakdownFrom,
+  saveCompletionsForDate,
 } from '../utils/streak';
 
 const MONTH_NAMES = [
@@ -36,6 +40,8 @@ export default function HistoryScreen() {
   // Which month the grid is showing.
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
+  // The day currently open in the editor, or null.
+  const [editing, setEditing] = useState(null);
 
   // Reload everything whenever this tab is opened. One read of all history,
   // then every number on the screen is derived from it in memory.
@@ -72,6 +78,29 @@ export default function HistoryScreen() {
     const target = new Date(year, month + step, 1);
     setYear(target.getFullYear());
     setMonth(target.getMonth());
+  }
+
+  // Add or remove one prayer on a past day.
+  async function toggleOnDay(date, name) {
+    const current = byDate[date] ?? [];
+    const updated = current.includes(name)
+      ? current.filter((n) => n !== name)
+      : [...current, name];
+
+    // Update in memory first so the sheet and the grid respond immediately,
+    // then persist. Every derived number recomputes from this map on render.
+    const next = { ...byDate, [date]: updated };
+    setByDate(next);
+    setStreak(currentStreakFrom(next));
+    setBest(bestStreakFrom(next));
+
+    await saveCompletionsForDate(date, updated);
+
+    // Editing *today* also changes which reminders should still fire.
+    if (date === todayKey) {
+      const cached = await getCachedTimings();
+      if (cached) await refreshPrayerNotifications(cached.timings, updated);
+    }
   }
 
   return (
@@ -134,7 +163,14 @@ export default function HistoryScreen() {
             {days.map((day) => {
               const isFuture = day.date > todayKey;
               return (
-                <View key={day.date} style={styles.cell}>
+                <TouchableOpacity
+                  key={day.date}
+                  style={styles.cell}
+                  // Days that haven't happened can't be filled in.
+                  disabled={isFuture}
+                  onPress={() => setEditing(day.date)}
+                  activeOpacity={0.6}
+                >
                   <View
                     style={[
                       styles.dayDot,
@@ -148,14 +184,14 @@ export default function HistoryScreen() {
                     ]}
                   />
                   <Text style={styles.dayNumber}>{day.dayOfMonth}</Text>
-                </View>
+                </TouchableOpacity>
               );
             })}
           </View>
 
           <Text style={styles.perfect}>
             {perfectDays} complete {perfectDays === 1 ? 'day' : 'days'} this
-            month
+            month · tap a day to edit
           </Text>
         </View>
 
@@ -181,6 +217,13 @@ export default function HistoryScreen() {
 
         <View style={styles.bottomSpace} />
       </ScrollView>
+
+      <DayEditor
+        date={editing}
+        prayers={editing ? byDate[editing] ?? [] : []}
+        onToggle={(name) => toggleOnDay(editing, name)}
+        onClose={() => setEditing(null)}
+      />
     </View>
   );
 }

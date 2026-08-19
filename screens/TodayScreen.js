@@ -10,10 +10,9 @@ import {
 import PrayerCard from '../components/PrayerCard';
 import { useState, useEffect, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getNextPrayer } from '../utils/nextPrayer';
 import { useTheme } from '../utils/ThemeContext';
-import { formatDate, getKeyForDate } from '../utils/streak';
+import { formatDate, saveCompletionsForDate } from '../utils/streak';
 import { loadPrayerTimes } from '../utils/prayerTimes';
 import {
   getCompletedToday,
@@ -129,16 +128,9 @@ export default function TodayScreen({ route, navigation }) {
   // Save to the device, then bring the reminder schedule back in line so
   // completed prayers don't buzz again later today.
   async function saveCompleted(newList) {
-    try {
-      await AsyncStorage.setItem(
-        getKeyForDate(new Date()),
-        JSON.stringify(newList)
-      );
-      if (timings) {
-        await refreshPrayerNotifications(timings, newList);
-      }
-    } catch (error) {
-      console.log('Error saving:', error);
+    await saveCompletionsForDate(formatDate(new Date()), newList);
+    if (timings) {
+      await refreshPrayerNotifications(timings, newList);
     }
   }
 

@@ -57,6 +57,18 @@ export async function loadAllCompletions() {
   }
 }
 
+// Write the completed list for one day. Everything that records a prayer goes
+// through here, so the key format lives in exactly one place.
+export async function saveCompletionsForDate(isoDate, prayers) {
+  try {
+    await AsyncStorage.setItem(`${PREFIX}${isoDate}`, JSON.stringify(prayers));
+    return true;
+  } catch (error) {
+    console.log('Error saving completions:', error);
+    return false;
+  }
+}
+
 function isComplete(byDate, date) {
   const list = byDate[formatDate(date)];
   return Array.isArray(list) && list.length === PRAYER_NAMES.length;
