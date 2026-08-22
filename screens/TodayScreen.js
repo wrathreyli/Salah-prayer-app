@@ -8,11 +8,16 @@ import {
   View,
 } from 'react-native';
 import PrayerCard from '../components/PrayerCard';
+import ProgressRing from '../components/ProgressRing';
 import { useState, useEffect, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { getNextPrayer } from '../utils/nextPrayer';
 import { useTheme } from '../utils/ThemeContext';
-import { formatDate, saveCompletionsForDate } from '../utils/streak';
+import {
+  calculateStreak,
+  formatDate,
+  saveCompletionsForDate,
+} from '../utils/streak';
 import { loadPrayerTimes } from '../utils/prayerTimes';
 import {
   getCompletedToday,
@@ -32,6 +37,12 @@ function formatStaleDate(isoDate) {
   return `${MONTHS[Number(month) - 1]} ${Number(day)}`;
 }
 
+// "in 2h 14m", or just "in 14m" once the hours run out.
+function countdownLabel(prayer) {
+  if (prayer.hoursLeft === 0) return `in ${prayer.minutesLeft}m`;
+  return `in ${prayer.hoursLeft}h ${prayer.minutesLeft}m`;
+}
+
 export default function TodayScreen({ route, navigation }) {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
@@ -44,6 +55,7 @@ export default function TodayScreen({ route, navigation }) {
   const [completed, setCompleted] = useState([]);
   const [nextPrayer, setNextPrayer] = useState(null);
   const [highlighted, setHighlighted] = useState(null);
+  const [streak, setStreak] = useState(0);
 
   // Arrived here from a notification tap — briefly highlight that prayer.
   useEffect(() => {
@@ -98,6 +110,7 @@ export default function TodayScreen({ route, navigation }) {
     useCallback(() => {
       async function loadCompleted() {
         setCompleted(await getCompletedToday());
+        setStreak(await calculateStreak());
       }
       loadCompleted();
     }, [])
@@ -143,6 +156,8 @@ export default function TodayScreen({ route, navigation }) {
     }
     setCompleted(newList);
     saveCompleted(newList);
+    // Completing (or un-completing) the fifth prayer moves the streak.
+    calculateStreak().then(setStreak);
   }
 
   if (loading) {
@@ -191,7 +206,6 @@ export default function TodayScreen({ route, navigation }) {
       <View style={styles.header}>
         <Text style={styles.title}>Prayer Times</Text>
         <Text style={styles.subtitle}>{locationName}</Text>
-        <Text style={styles.date}>{completed.length} of 5 completed today</Text>
       </View>
       {staleDate && (
         <View style={styles.staleBanner}>
@@ -201,15 +215,35 @@ export default function TodayScreen({ route, navigation }) {
           </Text>
         </View>
       )}
-      {nextPrayer && (
-        <View style={styles.nextCard}>
-          <Text style={styles.nextLabel}>NEXT PRAYER</Text>
-          <Text style={styles.nextName}>{nextPrayer.name}</Text>
-          <Text style={styles.nextTime}>
-            in {nextPrayer.hoursLeft}h {nextPrayer.minutesLeft}m
+      {/* One card answering the three things you open the app for: how far
+          through the day you are, what's next, and whether the streak holds. */}
+      <View style={styles.summary}>
+        <ProgressRing
+          progress={completed.length / 5}
+          trackColor={colors.accentMuted}
+          fillColor={colors.accentText}
+        >
+          <Text style={styles.ringCount}>{completed.length}</Text>
+          <Text style={styles.ringOf}>of 5</Text>
+        </ProgressRing>
+
+        <View style={styles.summaryText}>
+          {nextPrayer ? (
+            <>
+              <Text style={styles.nextLabel}>NEXT PRAYER</Text>
+              <Text style={styles.nextName}>{nextPrayer.name}</Text>
+              <Text style={styles.nextTime}>{countdownLabel(nextPrayer)}</Text>
+            </>
+          ) : (
+            <Text style={styles.nextName}>Prayer times</Text>
+          )}
+          <Text style={styles.streakLine}>
+            {streak > 0
+              ? `${streak} day streak`
+              : 'Complete all five to start a streak'}
           </Text>
         </View>
-      )}
+      </View>
       <ScrollView
         style={styles.list}
         showsVerticalScrollIndicator={false}
@@ -283,28 +317,43 @@ function makeStyles(colors) {
       marginTop: 24,
     },
     retryText: { fontSize: 16, fontWeight: '600', color: colors.accentText },
-    nextCard: {
+    summary: {
       backgroundColor: colors.accent,
-      borderRadius: 20,
+      borderRadius: 22,
       padding: 20,
-      alignItems: 'center',
       marginBottom: 20,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 18,
     },
-    nextLabel: {
-      fontSize: 12,
-      color: colors.accentMuted,
-      letterSpacing: 1,
-    },
-    nextName: {
-      fontSize: 28,
+    summaryText: { flex: 1 },
+    ringCount: {
+      fontSize: 26,
       fontWeight: 'bold',
       color: colors.accentText,
-      marginTop: 4,
+      fontVariant: ['tabular-nums'],
+    },
+    ringOf: { fontSize: 11, color: colors.accentMuted, marginTop: -2 },
+    nextLabel: {
+      fontSize: 11,
+      color: colors.accentMuted,
+      letterSpacing: 1.2,
+    },
+    nextName: {
+      fontSize: 26,
+      fontWeight: 'bold',
+      color: colors.accentText,
+      marginTop: 2,
     },
     nextTime: {
-      fontSize: 16,
+      fontSize: 15,
       color: colors.accentMuted,
-      marginTop: 2,
+      marginTop: 1,
+    },
+    streakLine: {
+      fontSize: 13,
+      color: colors.accentMuted,
+      marginTop: 8,
     },
   });
 }
