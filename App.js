@@ -10,6 +10,7 @@ import HistoryScreen from './screens/HistoryScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import { ThemeProvider, useTheme } from './utils/ThemeContext';
 import QiblaScreen from './screens/QiblaScreen';
+import AdhkarScreen from './screens/AdhkarScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -37,6 +38,7 @@ function AppTabs() {
       <Tab.Screen name="History" component={HistoryScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
       <Tab.Screen name="Qibla" component={QiblaScreen} />
+      <Tab.Screen name="Adhkar" component={AdhkarScreen} />
     </Tab.Navigator>
   );
 }

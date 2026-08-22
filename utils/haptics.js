@@ -22,16 +22,29 @@ export async function setHapticsEnabled(enabled) {
   }
 }
 
-// A short confirmation buzz — used when the compass lines up with the Qibla.
-// Reads the setting on every call, which is fine because this only fires on a
-// state change, not on every sensor reading.
-export async function alignedFeedback() {
+// Every buzz goes through here, so the on/off check and the "some devices
+// have no vibration hardware" guard only exist once.
+async function buzz(run) {
   if (!(await areHapticsEnabled())) return;
 
   try {
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    await run();
   } catch (error) {
-    // Some devices have no vibration hardware — not worth surfacing.
     console.log('Haptics unavailable:', error);
   }
 }
+
+// A light tick — for something that repeats, like counting dhikr.
+export function tapFeedback() {
+  return buzz(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
+}
+
+// A fuller confirmation — for finishing something.
+export function successFeedback() {
+  return buzz(() =>
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+  );
+}
+
+// Used when the compass lines up with the Qibla.
+export const alignedFeedback = successFeedback;
