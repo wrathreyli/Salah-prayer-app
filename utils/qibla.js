@@ -30,7 +30,11 @@ export function getQiblaBearing(latitude, longitude) {
 }
 
 // The shortest signed turn from angle `from` to angle `to`, in the range
-// (-180, 180]. Going from 350° to 10° is +20°, not -340°.
+// [-180, 180). Going from 350° to 10° is +20°, not -340°.
+//
+// An exact half-turn comes back as -180 rather than +180. Either is correct —
+// they're the same rotation — but the range is half-open at the top, which the
+// comment used to get backwards.
 export function angleDifference(from, to) {
   return ((((to - from) % 360) + 540) % 360) - 180;
 }

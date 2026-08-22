@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import {
+  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -13,11 +14,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { getNextPrayer } from '../utils/nextPrayer';
 import { useTheme } from '../utils/ThemeContext';
-import {
-  calculateStreak,
-  formatDate,
-  saveCompletionsForDate,
-} from '../utils/streak';
+import { formatDate } from '../utils/streak';
+import { calculateStreak, saveCompletionsForDate } from '../utils/streakStorage';
 import { loadPrayerTimes } from '../utils/prayerTimes';
 import {
   getCompletedToday,
@@ -37,6 +35,24 @@ function formatStaleDate(isoDate) {
   return `${MONTHS[Number(month) - 1]} ${Number(day)}`;
 }
 
+// What to say when there's nothing to show. Saved times for another city, or
+// for a calculation method you've since changed, would be quietly wrong — so
+// they're refused, and the reason is worth explaining.
+const EMPTY_COPY = {
+  empty: {
+    title: 'No prayer times yet',
+    body: "Connect to the internet once and they'll be saved for offline use.",
+  },
+  moved: {
+    title: "You've moved",
+    body: 'The saved times are for somewhere else. Connect once to get times for where you are now.',
+  },
+  method: {
+    title: 'Calculation method changed',
+    body: 'The saved times use your previous method. Connect once to recalculate them.',
+  },
+};
+
 // "in 2h 14m", or just "in 14m" once the hours run out.
 function countdownLabel(prayer) {
   if (prayer.hoursLeft === 0) return `in ${prayer.minutesLeft}m`;
@@ -52,6 +68,7 @@ export default function TodayScreen({ route, navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [locationName, setLocationName] = useState('Loading location...');
   const [staleDate, setStaleDate] = useState(null); // set when showing cache
+  const [noneReason, setNoneReason] = useState('empty');
   const [completed, setCompleted] = useState([]);
   const [nextPrayer, setNextPrayer] = useState(null);
   const [highlighted, setHighlighted] = useState(null);
@@ -82,6 +99,7 @@ export default function TodayScreen({ route, navigation }) {
         ? result.cachedDate
         : null
     );
+    setNoneReason(result.reason ?? 'empty');
     setLoading(false);
 
     if (!result.timings) return;
@@ -141,7 +159,13 @@ export default function TodayScreen({ route, navigation }) {
   // Save to the device, then bring the reminder schedule back in line so
   // completed prayers don't buzz again later today.
   async function saveCompleted(newList) {
-    await saveCompletionsForDate(formatDate(new Date()), newList);
+    const saved = await saveCompletionsForDate(formatDate(new Date()), newList);
+    if (!saved) {
+      // The screen would otherwise show something that isn't on the device.
+      Alert.alert('Could not save', 'That change was not stored. Try again.');
+      setCompleted(await getCompletedToday());
+      return;
+    }
     if (timings) {
       await refreshPrayerNotifications(timings, newList);
     }
@@ -178,10 +202,8 @@ export default function TodayScreen({ route, navigation }) {
           <Text style={styles.title}>Prayer Times</Text>
         </View>
         <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>No prayer times yet</Text>
-          <Text style={styles.emptyText}>
-            Connect to the internet once and they'll be saved for offline use.
-          </Text>
+          <Text style={styles.emptyTitle}>{EMPTY_COPY[noneReason].title}</Text>
+          <Text style={styles.emptyText}>{EMPTY_COPY[noneReason].body}</Text>
           <TouchableOpacity style={styles.retry} onPress={onPullToRefresh}>
             <Text style={styles.retryText}>
               {refreshing ? 'Trying...' : 'Try again'}

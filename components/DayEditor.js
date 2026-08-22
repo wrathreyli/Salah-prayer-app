@@ -19,7 +19,7 @@ function readableDate(isoDate) {
 }
 
 // A sheet for filling in (or correcting) one past day.
-export default function DayEditor({ date, prayers, onToggle, onClose }) {
+export default function DayEditor({ date, prayers, onToggle, onClear, onClose }) {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
 
@@ -61,9 +61,25 @@ export default function DayEditor({ date, prayers, onToggle, onClose }) {
             );
           })}
 
-          <TouchableOpacity style={styles.done} onPress={onClose}>
-            <Text style={styles.doneText}>Done</Text>
-          </TouchableOpacity>
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={styles.clear}
+              onPress={onClear}
+              disabled={prayers.length === 0}
+            >
+              <Text
+                style={[
+                  styles.clearText,
+                  prayers.length === 0 && styles.clearTextOff,
+                ]}
+              >
+                Clear day
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.done} onPress={onClose}>
+              <Text style={styles.doneText}>Done</Text>
+            </TouchableOpacity>
+          </View>
         </Pressable>
       </Pressable>
     </Modal>
@@ -116,12 +132,24 @@ function makeStyles(colors) {
     check: { color: colors.accentText, fontSize: 13, fontWeight: 'bold' },
     name: { fontSize: 16, fontWeight: '600', color: colors.text },
     nameDone: { color: colors.textMuted },
+    actions: { flexDirection: 'row', gap: 10, marginTop: 6 },
+    clear: {
+      flex: 1,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      borderRadius: 14,
+      paddingVertical: 13,
+      alignItems: 'center',
+    },
+    clearText: { fontSize: 16, fontWeight: '600', color: colors.subtitle },
+    clearTextOff: { color: colors.dot },
     done: {
+      flex: 1,
       backgroundColor: colors.accent,
       borderRadius: 14,
       paddingVertical: 13,
       alignItems: 'center',
-      marginTop: 6,
     },
     doneText: { fontSize: 16, fontWeight: '600', color: colors.accentText },
   });

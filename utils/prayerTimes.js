@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { formatDate } from './streak';
+import { checkCache } from './cachePolicy';
 
 // One cache record: the last times we successfully fetched, plus enough
 // context to describe them later ("saved times for Istanbul, from Aug 18").
@@ -59,6 +60,8 @@ async function buildRequest() {
         url: `https://api.aladhan.com/v1/timings?latitude=${latitude}&longitude=${longitude}&method=${method}`,
         locationName: 'Your location',
         method,
+        latitude,
+        longitude,
       };
     }
   } catch (error) {
@@ -76,15 +79,20 @@ async function buildRequest() {
 // Get today's prayer times, falling back to the cache when the network fails.
 //
 // Always resolves — never throws — and always says where the data came from:
-//   { timings, locationName, source: 'network' | 'cache', cachedDate }
-//   { timings: null, ... }  when there's nothing to show at all
+//   { timings, locationName, source: 'network' | 'cache', cachedDate, reason }
+//   { timings: null, ... }  when there's nothing usable to show at all
+//
+// `reason` says why the cache was rejected — 'empty', 'method' (the
+// calculation method changed) or 'moved' (you're too far from where the
+// cached times were computed).
 //
 // `source: 'cache'` with a `cachedDate` that isn't today means the times are
 // stale: still roughly right (prayer times move a minute or two a day) but
 // worth flagging.
 export async function loadPrayerTimes() {
   const today = formatDate(new Date());
-  const { url, locationName, method } = await buildRequest();
+  const request = await buildRequest();
+  const { url, locationName } = request;
 
   try {
     const response = await fetchWithTimeout(url);
@@ -96,7 +104,16 @@ export async function loadPrayerTimes() {
       throw new Error('Unexpected response shape');
     }
 
-    const record = { date: today, timings, locationName, method };
+    // Store the context the times were computed for, so a later fallback can
+    // tell whether they still apply.
+    const record = {
+      date: today,
+      timings,
+      locationName,
+      method: request.method,
+      latitude: request.latitude,
+      longitude: request.longitude,
+    };
     await saveCache(record);
 
     return { timings, locationName, source: 'network', cachedDate: today };
@@ -104,12 +121,15 @@ export async function loadPrayerTimes() {
     console.log('Could not fetch prayer times:', error);
 
     const cached = await getCachedTimings();
-    if (!cached) {
+    const { usable, reason } = checkCache(cached, request);
+
+    if (!usable) {
       return {
         timings: null,
         locationName,
         source: 'none',
         cachedDate: null,
+        reason,
       };
     }
 
@@ -118,6 +138,7 @@ export async function loadPrayerTimes() {
       locationName: cached.locationName ?? locationName,
       source: 'cache',
       cachedDate: cached.date,
+      reason: null,
     };
   }
 }

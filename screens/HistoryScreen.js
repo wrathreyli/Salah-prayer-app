@@ -1,20 +1,12 @@
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import { Alert, StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../utils/ThemeContext';
 import DayEditor from '../components/DayEditor';
 import { getCachedTimings } from '../utils/prayerTimes';
 import { refreshPrayerNotifications } from '../utils/notifications';
-import {
-  PRAYER_NAMES,
-  bestStreakFrom,
-  currentStreakFrom,
-  formatDate,
-  loadAllCompletions,
-  monthDaysFrom,
-  prayerBreakdownFrom,
-  saveCompletionsForDate,
-} from '../utils/streak';
+import { PRAYER_NAMES, bestStreakFrom, currentStreakFrom, formatDate, monthDaysFrom, prayerBreakdownFrom } from '../utils/streak';
+import { loadAllCompletions, saveCompletionsForDate } from '../utils/streakStorage';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -80,12 +72,9 @@ export default function HistoryScreen() {
     setMonth(target.getMonth());
   }
 
-  // Add or remove one prayer on a past day.
-  async function toggleOnDay(date, name) {
-    const current = byDate[date] ?? [];
-    const updated = current.includes(name)
-      ? current.filter((n) => n !== name)
-      : [...current, name];
+  // Write one day's list, updating everything derived from it.
+  async function setDay(date, updated) {
+    const previous = byDate;
 
     // Update in memory first so the sheet and the grid respond immediately,
     // then persist. Every derived number recomputes from this map on render.
@@ -94,13 +83,32 @@ export default function HistoryScreen() {
     setStreak(currentStreakFrom(next));
     setBest(bestStreakFrom(next));
 
-    await saveCompletionsForDate(date, updated);
+    const saved = await saveCompletionsForDate(date, updated);
+    if (!saved) {
+      // Put the screen back to what's actually on the device.
+      setByDate(previous);
+      setStreak(currentStreakFrom(previous));
+      setBest(bestStreakFrom(previous));
+      Alert.alert('Could not save', 'That change was not stored. Try again.');
+      return;
+    }
 
     // Editing *today* also changes which reminders should still fire.
     if (date === todayKey) {
       const cached = await getCachedTimings();
       if (cached) await refreshPrayerNotifications(cached.timings, updated);
     }
+  }
+
+  // Add or remove one prayer on a past day.
+  function toggleOnDay(date, name) {
+    const current = byDate[date] ?? [];
+    return setDay(
+      date,
+      current.includes(name)
+        ? current.filter((n) => n !== name)
+        : [...current, name]
+    );
   }
 
   return (
@@ -222,6 +230,7 @@ export default function HistoryScreen() {
         date={editing}
         prayers={editing ? byDate[editing] ?? [] : []}
         onToggle={(name) => toggleOnDay(editing, name)}
+        onClear={() => setDay(editing, [])}
         onClose={() => setEditing(null)}
       />
     </View>
